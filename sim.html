@@ -1,0 +1,355 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Berlin Nature Matching Game</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #e8f5e9, #c8e6c9, #a5d6a7, #81c784);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        @keyframes gradientBG {
+            0% {background-position: 0% 50%;}
+            50% {background-position: 100% 50%;}
+            100% {background-position: 0% 50%;}
+        }
+
+        h1 {
+            color: #2e7d32;
+            text-shadow: 1px 1px 2px rgba(255,255,255,0.7);
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #388e3c;
+            margin-bottom: 30px;
+        }
+
+        .game-container {
+            display: flex;
+            justify-content: space-between;
+            width: 800px;
+            max-width: 90%;
+            margin-bottom: 30px;
+        }
+
+        .column {
+            width: 48%;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .item {
+            background-color: white;
+            border-radius: 8px;
+            padding: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            min-height: 80px;
+            text-align: center;
+        }
+
+        .item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+
+        .item.selected {
+            background-color: #bbdefb;
+            box-shadow: 0 0 0 3px #64b5f6;
+        }
+
+        .item.matched {
+            background-color: #c8e6c9;
+            cursor: default;
+            animation: pulse 0.5s;
+        }
+
+        @keyframes pulse {
+            0% {transform: scale(1);}
+            50% {transform: scale(1.05);}
+            100% {transform: scale(1);}
+        }
+
+        .item img {
+            width: 70px;
+            height: 70px;
+            object-fit: cover;
+            border-radius: 5px;
+            border: 2px solid #e0e0e0;
+        }
+
+        .item .latin-name {
+            font-style: italic;
+            color: #2e7d32;
+            font-weight: bold;
+        }
+
+        .score-container {
+            background: rgba(255,255,255,0.8);
+            padding: 15px 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            font-size: 18px;
+            color: #2e7d32;
+            margin-bottom: 20px;
+        }
+
+        .reset-btn {
+            padding: 12px 25px;
+            background: #388e3c;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        .reset-btn:hover {
+            background: #2e7d32;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .win-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255,255,255,0.95);
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            text-align: center;
+            z-index: 100;
+            animation: fadeIn 0.5s;
+            display: none;
+        }
+
+        @keyframes fadeIn {
+            from {opacity: 0;}
+            to {opacity: 1;}
+        }
+
+        .win-message h2 {
+            color: #2e7d32;
+            margin-top: 0;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 99;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Berlin Nature Matching Game</h1>
+    <p class="subtitle">Click to match images with their Latin names</p>
+    
+    <div class="score-container">
+        Matches: <span id="score">0</span>/5
+    </div>
+    
+    <div class="game-container">
+        <div class="column" id="columnA">
+            <!-- Items will be inserted here by JavaScript -->
+        </div>
+        
+        <div class="column" id="columnB">
+            <!-- Items will be inserted here by JavaScript -->
+        </div>
+    </div>
+    
+    <button class="reset-btn" id="resetBtn">Reset Game</button>
+    
+    <div class="overlay" id="overlay"></div>
+    <div class="win-message" id="winMessage">
+        <h2>Well Done!</h2>
+        <p>You've successfully matched all Berlin's flora and fauna!</p>
+        <button class="reset-btn" id="playAgainBtn">Play Again</button>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const columnA = document.getElementById('columnA');
+            const columnB = document.getElementById('columnB');
+            const scoreDisplay = document.getElementById('score');
+            const resetBtn = document.getElementById('resetBtn');
+            const playAgainBtn = document.getElementById('playAgainBtn');
+            const winMessage = document.getElementById('winMessage');
+            const overlay = document.getElementById('overlay');
+            
+            // Game data with provided images and Latin names
+            const gameData = [
+                {
+                    id: 1,
+                    image: 'https://static.inaturalist.org/photos/6235808/small.jpg',
+                    latinName: 'Sciurus vulgaris'  // Fixed typo from "vulgari" to "vulgaris"
+                },
+                {
+                    id: 2,
+                    image: 'https://inaturalist-open-data.s3.amazonaws.com/photos/271648285/small.jpg',
+                    latinName: 'Coccinella septempunctata'
+                },
+                {
+                    id: 3,
+                    image: 'https://inaturalist-open-data.s3.amazonaws.com/photos/4710619/small.jpg',
+                    latinName: 'Aglais io'
+                },
+                {
+                    id: 4,
+                    image: 'https://inaturalist-open-data.s3.amazonaws.com/photos/107485254/small.jpg',
+                    latinName: 'Sympetrum sanguineum'
+                },
+                {
+                    id: 5,
+                    image: 'https://inaturalist-open-data.s3.amazonaws.com/photos/1966840/small.jpg',
+                    latinName: 'Populus tremula'
+                }
+            ];
+            
+            let selectedItems = [];
+            let matchedPairs = 0;
+            
+            // Initialize game
+            function initGame() {
+                // Clear previous game
+                columnA.innerHTML = '';
+                columnB.innerHTML = '';
+                selectedItems = [];
+                matchedPairs = 0;
+                scoreDisplay.textContent = '0';
+                winMessage.style.display = 'none';
+                overlay.style.display = 'none';
+                
+                // Create all items
+                const allItems = [];
+                
+                gameData.forEach(item => {
+                    // Create image item
+                    allItems.push({
+                        type: 'image',
+                        id: item.id,
+                        content: `<img src="${item.image}" alt="${item.latinName}">`,
+                        latinName: item.latinName
+                    });
+                    
+                    // Create name item
+                    allItems.push({
+                        type: 'name',
+                        id: item.id,
+                        content: `<span class="latin-name">${item.latinName}</span>`,
+                        latinName: item.latinName
+                    });
+                });
+                
+                // Shuffle items
+                const shuffledItems = [...allItems].sort(() => Math.random() - 0.5);
+                
+                // Split between two columns
+                shuffledItems.forEach((item, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'item';
+                    div.dataset.id = item.id;
+                    div.dataset.type = item.type;
+                    div.dataset.latinName = item.latinName;
+                    div.innerHTML = item.content;
+                    
+                    div.addEventListener('click', () => selectItem(div));
+                    
+                    if (index % 2 === 0) {
+                        columnA.appendChild(div);
+                    } else {
+                        columnB.appendChild(div);
+                    }
+                });
+            }
+            
+            // Handle item selection
+            function selectItem(item) {
+                // Ignore if already matched or already selected
+                if (item.classList.contains('matched') || item.classList.contains('selected')) {
+                    return;
+                }
+                
+                // If nothing selected yet or selecting same item
+                if (selectedItems.length === 0 || selectedItems[0] === item) {
+                    item.classList.toggle('selected');
+                    selectedItems = item.classList.contains('selected') ? [item] : [];
+                    return;
+                }
+                
+                // If selecting a second item
+                if (selectedItems.length === 1) {
+                    const firstItem = selectedItems[0];
+                    
+                    // Check if they match (same id and different types)
+                    if (firstItem.dataset.id === item.dataset.id && 
+                        firstItem.dataset.type !== item.dataset.type) {
+                        
+                        // It's a match!
+                        firstItem.classList.add('matched');
+                        item.classList.add('matched');
+                        firstItem.classList.remove('selected');
+                        item.classList.remove('selected');
+                        
+                        matchedPairs++;
+                        scoreDisplay.textContent = matchedPairs;
+                        
+                        if (matchedPairs === gameData.length) {
+                            setTimeout(() => {
+                                winMessage.style.display = 'block';
+                                overlay.style.display = 'block';
+                            }, 500);
+                        }
+                    } else {
+                        // Not a match
+                        item.classList.add('selected');
+                        setTimeout(() => {
+                            firstItem.classList.remove('selected');
+                            item.classList.remove('selected');
+                        }, 1000);
+                    }
+                    
+                    selectedItems = [];
+                }
+            }
+            
+            // Reset game
+            function resetGame() {
+                initGame();
+            }
+            
+            // Event listeners
+            resetBtn.addEventListener('click', resetGame);
+            playAgainBtn.addEventListener('click', resetGame);
+            
+            // Start the game
+            initGame();
+        });
+    </script>
+</body>
+</html>
